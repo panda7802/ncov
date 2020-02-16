@@ -7,7 +7,7 @@ import traceback
 import scrapy
 from scrapy import Request
 
-from ncov.models import ZoneInfo, CnovInfo
+from ncov.models import ZoneInfo, CnovInfo, CnovHisInfo
 
 
 def get_dict_int(d, key, data=0):
@@ -21,14 +21,70 @@ def get_dict_int(d, key, data=0):
         return data
 
 
+save_city = False
+
+
+def ctrl_city_info(city_hist, p_id, s_time):
+    """
+    记录城市数据
+    :return:
+    """
+    unknow_num = 1
+    # 城市详情
+    for c_item in city_hist:
+        zone_info = ZoneInfo()
+        cnov_info = CnovInfo()
+        zone_info.name = c_item['name']
+        zone_info.pid = p_id
+        if 'id' in c_item.keys():
+            zone_info.mid = c_item['id']
+        else:
+            zone_info.mid = ("%s_%d" % (p_id, unknow_num))
+            unknow_num += 1
+
+        cnov_info.confirmedNum = get_dict_int(c_item, 'confirmedNum')
+        cnov_info.curesNum = get_dict_int(c_item, 'curesNum')
+        cnov_info.deathsNum = get_dict_int(c_item, 'deathsNum')
+        cnov_info.upd_time = s_time
+        cnov_info.cid = zone_info.mid
+        # try:
+        if save_city:
+            zone_info.save()
+        cnov_info.save()
+        # except:
+        #     traceback.print_exc()
+        print("\t\t城市：%s : %d , %d , %d" % (
+            c_item['name'], cnov_info.confirmedNum, cnov_info.curesNum, cnov_info.deathsNum))
+
+
+def ctrl_pro_his(series, p_id, s_time):
+    """
+    省历史数据
+    :return:
+    """
+    for s_item in series:
+        cnov_his_info = CnovHisInfo()
+        cnov_his_info.confirmedNum = get_dict_int(s_item, 'confirmedNum')
+        cnov_his_info.curesNum = get_dict_int(s_item, 'curesNum')
+        cnov_his_info.deathsNum = get_dict_int(s_item, 'deathsNum')
+        cnov_his_info.s_date = s_item['date']
+        cnov_his_info.upd_time = s_time
+        cnov_his_info.pid = p_id
+        print("\t\t历史：%s : %d , %d , %d" % (
+            cnov_his_info.s_date, cnov_his_info.confirmedNum, cnov_his_info.curesNum, cnov_his_info.deathsNum))
+        cnov_his_info.save()
+
+
 class CityHisSpider(scrapy.Spider):
     name = 'city_his'
     allowed_domains = ['i.snssdk.com']
     start_urls = ['https://i.snssdk.com/forum/home/v1/info/?activeWidget=1&forum_id=1656784762444839']
 
     def start_requests(self):
-        # ZoneInfo.objects.all().delete()
+        if save_city:
+            ZoneInfo.objects.all().delete()
         CnovInfo.objects.all().delete()
+        CnovHisInfo.objects.all().delete()
         yield Request(url=self.start_urls[0])
 
     def parse(self, response):
@@ -53,7 +109,6 @@ class CityHisSpider(scrapy.Spider):
         print(s_time)
         for item in provinces_his:
             # 省统计
-            print("----1---")
             print("省统计"
                   " ：%s,%d,%d,%d" %
                   (item['name'], get_dict_int(item, 'confirmedNum'), get_dict_int(item, 'curesNum'),
@@ -61,10 +116,12 @@ class CityHisSpider(scrapy.Spider):
             # 省地区信息
             p_id = item['id']
             city_hist = item['cities']
+            series = item['series']
             pro_info = ZoneInfo()
             pro_info.name = item['name']
             pro_info.mid = item['id']
-            # pro_info.save()
+            if save_city:
+                pro_info.save()
 
             # 省数据
             cnov_pro_info = CnovInfo()
@@ -72,34 +129,14 @@ class CityHisSpider(scrapy.Spider):
             cnov_pro_info.curesNum = get_dict_int(item, 'curesNum')
             cnov_pro_info.deathsNum = get_dict_int(item, 'deathsNum')
             cnov_pro_info.cid = p_id
+            cnov_pro_info.upd_time = s_time
             cnov_pro_info.save()
 
-            unknow_num = 1
-            for c_item in city_hist:
-                zone_info = ZoneInfo()
-                cnov_info = CnovInfo()
-                zone_info.name = c_item['name']
-                zone_info.pid = p_id
-                if 'id' in c_item.keys():
-                    zone_info.mid = c_item['id']
-                else:
-                    zone_info.mid = ("%s_%d" % (p_id, unknow_num))
-                    unknow_num += 1
+            # 城市数据
+            ctrl_city_info(city_hist, p_id, s_time)
 
-                # 城市详情
-                cnov_info.confirmedNum = get_dict_int(c_item, 'confirmedNum')
-                cnov_info.curesNum = get_dict_int(c_item, 'curesNum')
-                cnov_info.deathsNum = get_dict_int(c_item, 'deathsNum')
-                cnov_info.cid = zone_info.mid
-                # try:
-                # zone_info.save()
-                cnov_info.save()
-                # except:
-                #     traceback.print_exc()
-                print("\t\t%s : %d , %d , %d" % (
-                    c_item['name'], cnov_info.confirmedNum, cnov_info.curesNum, cnov_info.deathsNum))
+            # 省历史信息
+            ctrl_pro_his(series, p_id, s_time)
 
-                # 省历史信息
-                # if k == 'series':
-                #     print("省历史信息 ：k :%s , v : %s" % (k, item[k]))
+            # # TODO 测试，只有一次
             # return
