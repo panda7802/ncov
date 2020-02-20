@@ -107,6 +107,7 @@ class CityHisSpider(scrapy.Spider):
         update_time = provinces_data['updateTime']
         s_time = datetime.datetime.fromtimestamp(update_time).strftime("%Y-%m-%d %H:%M:%S")
         print(s_time)
+
         for item in provinces_his:
             # 省统计
             print("省统计"
@@ -140,3 +141,62 @@ class CityHisSpider(scrapy.Spider):
 
             # # TODO 测试，只有一次
             # return
+
+        # 获取全国数据
+        print("-----获取全国数据------")
+        china_his = provinces_data['nationwide']
+        print(china_his)
+        zoneinfo_chinas = ZoneInfo.objects.filter(mid=0)
+
+        if len(zoneinfo_chinas) <= 0:
+            zoneinfo_china = ZoneInfo()
+            zoneinfo_china.upd_time = s_time
+            zoneinfo_china.pid = 0
+            zoneinfo_china.mid = 0
+            zoneinfo_china.name = '中国'
+            zoneinfo_china.save()
+        else:
+            zoneinfo_china = zoneinfo_chinas[0]
+
+        mid_without_hb = '01'
+        zoneinfo_withouthbs = ZoneInfo.objects.filter(mid=mid_without_hb)  # 除了湖北
+        if len(zoneinfo_withouthbs) <= 0:
+            zoneinfo_withouthb = ZoneInfo()
+            zoneinfo_withouthb.upd_time = s_time
+            zoneinfo_withouthb.pid = 0
+            zoneinfo_withouthb.mid = mid_without_hb
+            zoneinfo_withouthb.name = '除湖北'
+            zoneinfo_withouthb.save()
+
+        for s_item in china_his:
+            cnov_his_info = CnovHisInfo()
+            cnov_his_info.confirmedNum = get_dict_int(s_item, 'confirmedNum')
+            cnov_his_info.curesNum = get_dict_int(s_item, 'curesNum')
+            cnov_his_info.deathsNum = get_dict_int(s_item, 'deathsNum')
+            cnov_his_info.s_date = s_item['date']
+            cnov_his_info.upd_time = s_time
+            cnov_his_info.pid = zoneinfo_china.pid
+            print("\t\t全国历史：%s : %d , %d , %d" % (
+                cnov_his_info.s_date, cnov_his_info.confirmedNum, cnov_his_info.curesNum, cnov_his_info.deathsNum))
+            try:
+                cnov_his_withouthb = CnovHisInfo()
+                cnov_his_withouthb.pid = mid_without_hb
+                cnov_his_hbs = CnovHisInfo.objects.filter(pid='42').filter(s_date=s_item['date'])
+                if len(cnov_his_hbs) > 0:
+                    cnov_his_withouthb.confirmedNum = get_dict_int(s_item, 'confirmedNum') - cnov_his_hbs[0].confirmedNum
+                    cnov_his_withouthb.curesNum = get_dict_int(s_item, 'curesNum') - cnov_his_hbs[0].curesNum
+                    cnov_his_withouthb.deathsNum = get_dict_int(s_item, 'deathsNum') - cnov_his_hbs[0].deathsNum
+                else:
+                    cnov_his_withouthb.confirmedNum = get_dict_int(s_item, 'confirmedNum')
+                    cnov_his_withouthb.curesNum = get_dict_int(s_item, 'curesNum')
+                    cnov_his_withouthb.deathsNum = get_dict_int(s_item, 'deathsNum')
+                cnov_his_withouthb.s_date = s_item['date']
+                cnov_his_withouthb.upd_time = s_time
+                cnov_his_withouthb.save()
+                print("\t\t除湖北历史：%s : %d , %d , %d" % (
+                    cnov_his_withouthb.s_date, cnov_his_withouthb.confirmedNum, cnov_his_withouthb.curesNum,
+                    cnov_his_withouthb.deathsNum))
+                cnov_his_info.save()
+            except:
+                logging.error(traceback.format_exc())
+                traceback.print_exc()
