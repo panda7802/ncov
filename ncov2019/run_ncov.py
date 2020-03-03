@@ -3,13 +3,10 @@
 from __future__ import absolute_import
 
 import os
-import subprocess
 import sys
-import time
 
 import django
 from scrapy import cmdline
-from multiprocessing import Process
 
 
 def get_2019ncov():
