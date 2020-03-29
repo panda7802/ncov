@@ -65,7 +65,7 @@ ROBOTSTXT_OBEY = True
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
    # 'ncov2019.pipelines.Ncov2019Pipeline': 300,
-   'ncov2019.pipelines_city.NcovCityPipeline': 400,
+   # 'ncov2019.pipelines_city.NcovCityPipeline': 400,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

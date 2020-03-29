@@ -36,7 +36,15 @@ def get_city_info():
     """
     args = "scrapy crawl get_city_info".split()
     cmdline.execute(args)
-    # subprocess.Popen(args)
+
+
+def get_world_his():
+    """
+    获取国际历史列表
+    :return:
+    """
+    args = "scrapy crawl get_world_his".split()
+    cmdline.execute(args)
 
 
 if __name__ == '__main__':
@@ -50,7 +58,9 @@ if __name__ == '__main__':
     django.setup()
 
     # get_2019ncov()
-    get_ncov_city()
+
+    # get_ncov_city()
+    get_world_his()
     # get_city_info()
 
     # while True:

@@ -22,3 +22,18 @@ class CityHisItem(scrapy.Item):
     confirmedNum = scrapy.Field()
     deathsNum = scrapy.Field()
     provinces = scrapy.Field()
+
+
+class HisItem(scrapy.Item):
+    # 时间
+    time_now = scrapy.Field()
+    # 地区
+    province = scrapy.Field()
+    # 确诊
+    sure = scrapy.Field()
+    # 死亡
+    dead = scrapy.Field()
+    # 治愈
+    ok = scrapy.Field()
+    # 疑似
+    maybe = scrapy.Field()

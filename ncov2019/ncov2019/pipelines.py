@@ -12,21 +12,6 @@ import scrapy
 from openpyxl import Workbook
 
 
-class HisItem(scrapy.Item):
-    # 时间
-    time_now = scrapy.Field()
-    # 地区
-    province = scrapy.Field()
-    # 确诊
-    sure = scrapy.Field()
-    # 死亡
-    dead = scrapy.Field()
-    # 治愈
-    ok = scrapy.Field()
-    # 疑似
-    maybe = scrapy.Field()
-
-
 class Ncov2019Pipeline(object):
 
     def __init__(self):

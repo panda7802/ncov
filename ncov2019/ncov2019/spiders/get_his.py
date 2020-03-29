@@ -4,9 +4,8 @@ import json
 import logging
 
 import scrapy
-
-from ncov2019.pipelines import HisItem
-from ncov.models import ZoneInfo
+# from ncov2019.pipelines import HisItem
+from ncov2019.items import HisItem
 
 
 class GetHisSpider(scrapy.Spider):

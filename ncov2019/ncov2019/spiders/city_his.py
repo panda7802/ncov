@@ -80,6 +80,8 @@ class CityHisSpider(scrapy.Spider):
     allowed_domains = ['i.snssdk.com']
     start_urls = ['https://i.snssdk.com/forum/home/v1/info/?activeWidget=1&forum_id=1656784762444839']
 
+    # start_urls = ['https://i.snssdk.com/forum/ncov_data/?forum_id=1656388947394568&is_web_refresh=1&data_type=%5B6%5D&province_id=%5B%22320000%22%5D']
+
     def start_requests(self):
         if save_city:
             ZoneInfo.objects.all().delete()
@@ -106,7 +108,7 @@ class CityHisSpider(scrapy.Spider):
         # 数据由三部分构成，城市详情，省统计，省历史信息
         update_time = provinces_data['updateTime']
         s_time = datetime.datetime.fromtimestamp(update_time).strftime("%Y-%m-%d %H:%M:%S")
-        print(s_time)
+        # print(s_time)
 
         for item in provinces_his:
             # 省统计
@@ -135,11 +137,16 @@ class CityHisSpider(scrapy.Spider):
 
             # 城市数据
             ctrl_city_info(city_hist, p_id, s_time)
+            print("------------1----------")
 
             # 省历史信息
-            ctrl_pro_his(series, p_id, s_time)
+            pro_his_url = 'https://i.snssdk.com/forum/ncov_data/?forum_id=1656388947394568&is_web_refresh=1&data_type=%5B6%5D&province_id=%5B%22' + p_id \
+                          + '0000%22%5D'
+            print(pro_his_url)
+            yield Request(pro_his_url, callback=self.parse_pro_his, meta={'pid': p_id,'s_time':s_time})
+            # ctrl_pro_his(series, p_id, s_time)
 
-            # # TODO 测试，只有一次
+            # # fixme 测试，只有一次
             # return
 
         # 获取全国数据
@@ -183,7 +190,8 @@ class CityHisSpider(scrapy.Spider):
                 cnov_his_withouthb.pid = mid_without_hb
                 cnov_his_hbs = CnovHisInfo.objects.filter(pid='42').filter(s_date=s_item['date'])
                 if len(cnov_his_hbs) > 0:
-                    cnov_his_withouthb.confirmedNum = get_dict_int(s_item, 'confirmedNum') - cnov_his_hbs[0].confirmedNum
+                    cnov_his_withouthb.confirmedNum = get_dict_int(s_item, 'confirmedNum') - cnov_his_hbs[
+                        0].confirmedNum
                     cnov_his_withouthb.curesNum = get_dict_int(s_item, 'curesNum') - cnov_his_hbs[0].curesNum
                     cnov_his_withouthb.deathsNum = get_dict_int(s_item, 'deathsNum') - cnov_his_hbs[0].deathsNum
                 else:
@@ -200,3 +208,31 @@ class CityHisSpider(scrapy.Spider):
             except:
                 logging.error(traceback.format_exc())
                 traceback.print_exc()
+
+    def parse_pro_his(self, response):
+        """
+        获取省份历史
+        :param self:
+        :param response:
+        :return:
+        """
+        if response.status != 200:
+            print("parse_pro_his get err ,url : " + response.url)
+            logging.error("parse_pro_his get err ,url : " + response.url)
+            return
+
+        p_id = response.meta['pid']
+        print('parse_pro_his : %s ' % p_id)
+        print(response.body)
+        s_json = response.body.decode('utf-8', 'ignore')
+        dict_data = json.loads(s_json)
+        # print(dict_data)
+
+        try:
+            s_provinces_his = dict_data['province_data'][p_id]
+            provinces_data = json.loads(s_provinces_his)
+            series = provinces_data['series']
+            print(series)
+            ctrl_pro_his(series, p_id, response.meta['s_time'])
+        except:
+            logging.error(traceback.format_exc())
